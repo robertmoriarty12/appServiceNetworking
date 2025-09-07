@@ -1,0 +1,92 @@
+@{
+    ViewData["Title"] = "Message Processor";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Message Processor</h1>
+    <p class="lead">Enter any message (up to 1000 characters). Type "secret" to retrieve a value from Azure Key Vault</p>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                @if (ViewBag.Success == true)
+                {
+                    @if (ViewBag.IsSecret == true)
+                    {
+                        <div class="alert alert-success" role="alert">
+                            <h5 class="alert-heading">Secret Retrieved Successfully!</h5>
+                            <p><strong>Secret Name:</strong> @ViewBag.SecretName</p>
+                            <p><strong>Secret Value:</strong> @ViewBag.SecretValue</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info" role="alert">
+                            <h5 class="alert-heading">Message Received</h5>
+                            <p><strong>Your Message:</strong> @ViewBag.Message</p>
+                        </div>
+                    }
+                }
+
+                @if (!string.IsNullOrEmpty(ViewBag.Error))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        <h5 class="alert-heading">Error</h5>
+                        <p>@ViewBag.Error</p>
+                    </div>
+                }
+
+                <form method="post" asp-action="GetSecret">
+                    <div class="mb-3">
+                        <label for="secretName" class="form-label">Message</label>
+                        <textarea class="form-control" id="secretName" name="secretName" 
+                                  placeholder="Enter any message (up to 1000 characters). Type 'secret' to retrieve from Key Vault" 
+                                  rows="3" maxlength="1000" required></textarea>
+                        <div class="form-text">Characters remaining: <span id="charCount">1000</span></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Send Message</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>How it works</h5>
+            </div>
+            <div class="card-body">
+                <ol>
+                    <li>Enter any message up to 1000 characters</li>
+                    <li>Click "Send Message" to process it</li>
+                    <li>If you type exactly "secret", it will retrieve a value from Azure Key Vault</li>
+                    <li>Otherwise, it will just echo back your message</li>
+                </ol>
+                <p class="text-muted">
+                    <small>The app uses managed identity to securely access Azure Key Vault when needed.</small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('secretName').addEventListener('input', function() {
+            const maxLength = 1000;
+            const currentLength = this.value.length;
+            const remaining = maxLength - currentLength;
+            document.getElementById('charCount').textContent = remaining;
+            
+            if (remaining < 50) {
+                document.getElementById('charCount').style.color = 'red';
+            } else {
+                document.getElementById('charCount').style.color = 'inherit';
+            }
+        });
+    </script>
+}
