@@ -1,0 +1,17 @@
+{
+  "name": "keyvault-secret-app",
+  "version": "1.0.0",
+  "description": "Azure Key Vault Secret Retrieval App",
+  "main": "server.js",
+  "scripts": {
+    "start": "npm install && node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "@azure/identity": "^3.4.0",
+    "@azure/keyvault-secrets": "^4.7.0"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}

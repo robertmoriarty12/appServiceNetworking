@@ -1,10 +1,11 @@
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllers();
 
 // Configure Key Vault client with managed identity
 builder.Services.AddSingleton<SecretClient>(provider =>
@@ -23,19 +24,14 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
+    app.UseExceptionHandler("/Error");
 }
 
-app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
+app.MapControllers();
 
-app.UseAuthorization();
-
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+// Serve the HTML file
+app.MapGet("/", () => Results.Content(System.IO.File.ReadAllText("index.html"), "text/html"));
 
 app.Run();

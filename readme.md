@@ -25,12 +25,12 @@ A lightweight ASP.NET Core web application that allows users to retrieve secrets
 ### Step 1: Deploy Azure Resources
 
 1. **Create App Service:**
-   - Runtime Stack: `.NET 8 (LTS)`
+   - Runtime Stack: `Node.js 22 LTS`
    - Platform: `64 Bit`
    - Note your App Service name and Resource Group
 
 2. **Create Azure Key Vault:**
-   - Note your Key Vault URL (e.g., `https://your-keyvault-name.vault.azure.net/`)
+   - Note your Key Vault URL (e.g., `https://your-keyvault-name.vault.azure.net`)
 
 3. **Create Secret in Key Vault:**
    - Name: `my-secret`
@@ -49,23 +49,23 @@ A lightweight ASP.NET Core web application that allows users to retrieve secrets
 
 3. **Set App Setting:**
    - Go to App Service → Configuration → Application settings
-   - Add: `KeyVaultUrl` = `https://your-keyvault-name.vault.azure.net/`
+   - Add: `KeyVaultUrl` = `https://your-keyvault-name.vault.azure.net` (no trailing slash)
 
 ### Step 3: Deploy Application
 
 1. **Upload ZIP to Cloud Shell:**
    - Open Azure Cloud Shell
-   - Upload `KeyVaultSecretApp-CustomerReady.zip`
+   - Upload `KeyVaultSecretApp-Working.zip`
 
 2. **Deploy via Azure CLI:**
    ```bash
-   az webapp deploy --resource-group "your-resource-group" --name "your-app-service-name" --src-path "KeyVaultSecretApp-CustomerReady.zip" --type zip
+   az webapp deploy --resource-group "your-resource-group" --name "your-app-service-name" --src-path "KeyVaultSecretApp-Working.zip" --type zip
    ```
 
 3. **Test your app:**
    - Visit: `https://your-app-service-name.azurewebsites.net`
    - Type any message → should echo back
-   - Type `secret` → should show Key Vault secret
+   - Type `secret` → should retrieve actual secret from Key Vault
 
 ### 3. Configure App Service Settings
 
