@@ -16,37 +16,56 @@ A lightweight ASP.NET Core web application that allows users to retrieve secrets
 - App Service with managed identity enabled
 - App Service has Key Vault access permissions
 
-## Deployment Instructions
+## Customer Deployment Instructions
 
-### 1. Update Configuration
+### Prerequisites
+- Azure subscription
+- Azure CLI installed (for Cloud Shell deployment)
 
-Before deploying, update the `appsettings.json` file with your Key Vault URL:
+### Step 1: Deploy Azure Resources
 
-```json
-{
-  "KeyVaultUrl": "https://your-keyvault-name.vault.azure.net/"
-}
-```
+1. **Create App Service:**
+   - Runtime Stack: `.NET 8 (LTS)`
+   - Platform: `64 Bit`
+   - Note your App Service name and Resource Group
 
-### 2. Deploy to Azure App Service
+2. **Create Azure Key Vault:**
+   - Note your Key Vault URL (e.g., `https://your-keyvault-name.vault.azure.net/`)
 
-1. **Build the application:**
+3. **Create Secret in Key Vault:**
+   - Name: `my-secret`
+   - Value: `Hello, this is the secret from key vault`
+
+### Step 2: Configure App Service
+
+1. **Enable Managed Identity:**
+   - Go to App Service → Identity → System assigned → Turn ON
+   - Copy the Object ID
+
+2. **Grant Key Vault Access:**
+   - Go to Key Vault → Access policies (or Access control IAM)
+   - Add App Service's managed identity
+   - Grant Key Vault admin permissions over the resource group
+
+3. **Set App Setting:**
+   - Go to App Service → Configuration → Application settings
+   - Add: `KeyVaultUrl` = `https://your-keyvault-name.vault.azure.net/`
+
+### Step 3: Deploy Application
+
+1. **Upload ZIP to Cloud Shell:**
+   - Open Azure Cloud Shell
+   - Upload `KeyVaultSecretApp-CustomerReady.zip`
+
+2. **Deploy via Azure CLI:**
    ```bash
-   dotnet publish -c Release -o ./publish
+   az webapp deploy --resource-group "your-resource-group" --name "your-app-service-name" --src-path "KeyVaultSecretApp-CustomerReady.zip" --type zip
    ```
 
-2. **Create a ZIP file** of the publish folder contents
-
-3. **Deploy via Azure Portal:**
-   - Go to your App Service in Azure Portal
-   - Navigate to "Deployment Center"
-   - Choose "Local Git" or "ZIP Deploy"
-   - Upload your ZIP file
-
-4. **Or deploy via Azure CLI:**
-   ```bash
-   az webapp deployment source config-zip --resource-group <resource-group> --name <app-service-name> --src <path-to-zip>
-   ```
+3. **Test your app:**
+   - Visit: `https://your-app-service-name.azurewebsites.net`
+   - Type any message → should echo back
+   - Type `secret` → should show Key Vault secret
 
 ### 3. Configure App Service Settings
 
