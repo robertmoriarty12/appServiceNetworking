@@ -105,6 +105,28 @@ A lightweight ASP.NET Core web application that allows users to retrieve secrets
 - **Authentication errors**: Verify managed identity is enabled and has Key Vault access
 - **Configuration errors**: Ensure KeyVaultUrl is correctly set in app settings
 
+### Debugging Commands
+
+**View real-time logs:**
+```bash
+az webapp log tail --resource-group "your-resource-group" --name "your-app-service-name"
+```
+
+**Download logs for analysis:**
+```bash
+az webapp log download --resource-group "your-resource-group" --name "your-app-service-name" --log-file "logs.zip"
+```
+
+**Check App Service configuration:**
+```bash
+az webapp config show --resource-group "your-resource-group" --name "your-app-service-name" --query "linuxFxVersion"
+```
+
+**Test API endpoint directly:**
+```bash
+curl https://your-app-service-name.azurewebsites.net/api/secret/my-secret
+```
+
 ## File Structure
 
 ```
