@@ -67,6 +67,229 @@ A lightweight ASP.NET Core web application that allows users to retrieve secrets
    - Type any message → should echo back
    - Type `secret` → should retrieve actual secret from Key Vault
 
+### Step 4: Application Gateway + WAF Configuration (Optional)
+
+For production deployments with Application Gateway and WAF protection:
+
+#### Prerequisites
+- Virtual Network with Application Gateway subnet
+- Custom domain names (e.g., `yourapp1.com`, `yourapp2.com`)
+- SSL certificates for custom domains
+
+#### 4.1 Deploy Application Gateway
+
+1. **Use Gateway-Ready App:**
+   - Deploy `KeyVaultSecretApp-WithGateway.zip` to your App Services
+   - This version includes `app.set('trust proxy', true)` for proper proxy handling
+
+2. **Create Application Gateway:**
+   ```bash
+   # Create Application Gateway with WAF v2
+   az network application-gateway create \
+     --resource-group "your-resource-group" \
+     --name "your-app-gateway" \
+     --location "centralus" \
+     --sku WAF_v2 \
+     --capacity 2 \
+     --vnet-name "your-vnet" \
+     --subnet "ApplicationGatewaySubnet" \
+     --public-ip-address "your-public-ip"
+   ```
+
+#### 4.2 Configure DNS Zones
+
+1. **Create DNS Zones:**
+   ```bash
+   # Create DNS zones for custom domains
+   az network dns zone create \
+     --resource-group "your-resource-group" \
+     --name "yourapp1.com"
+   
+   az network dns zone create \
+     --resource-group "your-resource-group" \
+     --name "yourapp2.com"
+   ```
+
+2. **Add A Records:**
+   ```bash
+   # Point domains to Application Gateway public IP
+   az network dns record-set a add-record \
+     --resource-group "your-resource-group" \
+     --zone-name "yourapp1.com" \
+     --record-set-name "@" \
+     --ipv4-address "your-app-gateway-public-ip"
+   ```
+
+#### 4.3 Configure SSL Certificates
+
+1. **Upload SSL Certificates:**
+   ```bash
+   # Upload certificate for app1
+   az network application-gateway ssl-cert create \
+     --resource-group "your-resource-group" \
+     --gateway-name "your-app-gateway" \
+     --name "app1cert" \
+     --cert-file "app1.crt" \
+     --cert-password "your-password"
+   ```
+
+#### 4.4 Configure Backend Pools
+
+1. **Create Backend Pools:**
+   ```bash
+   # Backend pool for app1
+   az network application-gateway address-pool create \
+     --resource-group "your-resource-group" \
+     --gateway-name "your-app-gateway" \
+     --name "app1" \
+     --servers "yourapp1.azurewebsites.net"
+   
+   # Backend pool for app2
+   az network application-gateway address-pool create \
+     --resource-group "your-resource-group" \
+     --gateway-name "your-app-gateway" \
+     --name "app2" \
+     --servers "yourapp2.azurewebsites.net"
+   ```
+
+#### 4.5 Configure Health Probes
+
+1. **Create Health Probes:**
+   ```bash
+   # Health probe for app1
+   az network application-gateway probe create \
+     --resource-group "your-resource-group" \
+     --gateway-name "your-app-gateway" \
+     --name "probeapp1" \
+     --protocol Https \
+     --host "yourapp1.azurewebsites.net" \
+     --path "/health" \
+     --interval 30 \
+     --timeout 30 \
+     --threshold 3
+   ```
+
+#### 4.6 Configure HTTP Settings
+
+1. **Create Backend HTTP Settings:**
+   ```bash
+   # HTTP settings for app1
+   az network application-gateway http-settings create \
+     --resource-group "your-resource-group" \
+     --gateway-name "your-app-gateway" \
+     --name "app1backend" \
+     --port 443 \
+     --protocol Https \
+     --host-name "yourapp1.azurewebsites.net" \
+     --probe "probeapp1" \
+     --timeout 20
+   ```
+
+#### 4.7 Configure Listeners
+
+1. **Create HTTPS Listeners:**
+   ```bash
+   # Listener for app1
+   az network application-gateway http-listener create \
+     --resource-group "your-resource-group" \
+     --gateway-name "your-app-gateway" \
+     --name "app1listener" \
+     --frontend-port "port_443" \
+     --frontend-ip "appGwPublicFrontendIpIPv4" \
+     --host-name "yourapp1.com" \
+     --ssl-cert "app1cert"
+   ```
+
+#### 4.8 Configure Routing Rules
+
+1. **Create Routing Rules:**
+   ```bash
+   # Routing rule for app1
+   az network application-gateway rule create \
+     --resource-group "your-resource-group" \
+     --gateway-name "your-app-gateway" \
+     --name "routerule1" \
+     --rule-type Basic \
+     --http-listener "app1listener" \
+     --address-pool "app1" \
+     --http-settings "app1backend" \
+     --priority 1
+   ```
+
+#### 4.9 Configure WAF Policy
+
+1. **Create WAF Policy:**
+   ```bash
+   # Create WAF policy with OWASP 3.2 rules
+   az network application-gateway waf-policy create \
+     --resource-group "your-resource-group" \
+     --name "wafpolicy" \
+     --location "centralus"
+   
+   # Add OWASP rule set
+   az network application-gateway waf-policy managed-rule-set add \
+     --resource-group "your-resource-group" \
+     --policy-name "wafpolicy" \
+     --rule-set-type OWASP \
+     --rule-set-version 3.2
+   
+   # Set WAF mode to Prevention
+   az network application-gateway waf-policy policy-setting update \
+     --resource-group "your-resource-group" \
+     --policy-name "wafpolicy" \
+     --state Enabled \
+     --mode Prevention
+   ```
+
+2. **Attach WAF Policy to Application Gateway:**
+   ```bash
+   az network application-gateway update \
+     --resource-group "your-resource-group" \
+     --name "your-app-gateway" \
+     --set firewallPolicy.id="/subscriptions/your-subscription/resourceGroups/your-resource-group/providers/Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies/wafpolicy"
+   ```
+
+#### 4.10 Test WAF Protection
+
+1. **Test Path Traversal Attack:**
+   ```bash
+   curl -k -i "https://yourapp1.com/?file=../../../../etc/passwd"
+   # Should return 403 Forbidden (WAF blocked)
+   ```
+
+2. **Test SQL Injection:**
+   ```bash
+   curl -k -i "https://yourapp1.com/api/secret/my-secret' OR 1=1--"
+   # Should return 403 Forbidden (WAF blocked)
+   ```
+
+3. **Test Normal Traffic:**
+   ```bash
+   curl -k -i "https://yourapp1.com/"
+   # Should return 200 OK (normal traffic allowed)
+   ```
+
+#### 4.11 Example Configuration (Based on Working Setup)
+
+**Your Working Configuration:**
+- **Application Gateway**: `secretAppWafPoCAppGateway`
+- **Resource Group**: `secretAppWafPoC`
+- **Custom Domains**: 
+  - `secretappwafpoc1.com` → `secretappwafpocapp1-euh9bkgjf2d6acea.centralus-01.azurewebsites.net`
+  - `secretappwafpoc2.com` → `secretappwafpocapp2-aaf8hddmadftd7h4.centralus-01.azurewebsites.net`
+- **WAF Policy**: `wafpolicy` (OWASP 3.2, Prevention mode)
+- **Backend Pools**: `app1`, `app2`
+- **Health Probes**: `/` path, HTTPS, 30s interval
+- **SSL Certificates**: Self-signed certificates for custom domains
+
+**Key Configuration Details:**
+- **SKU**: WAF_v2 (Generation 2)
+- **Capacity**: 2 instances
+- **Zones**: 1, 2, 3 (multi-zone deployment)
+- **Backend Protocol**: HTTPS (port 443)
+- **Request Timeout**: 20 seconds
+- **Health Probe**: HTTPS to `/` endpoint
+
 ### 3. Configure App Service Settings
 
 1. **Enable Managed Identity:**

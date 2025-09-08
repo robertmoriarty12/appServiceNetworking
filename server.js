@@ -5,6 +5,9 @@ const { SecretClient } = require('@azure/keyvault-secrets');
 const app = express();
 const port = process.env.PORT || 8080;
 
+// Trust proxy for Application Gateway
+app.set('trust proxy', true);
+
 // Middleware
 app.use(express.json());
 app.use(express.static('.'));
@@ -22,6 +25,9 @@ app.get('/api/secret/:secretName', async (req, res) => {
         const secretName = req.params.secretName;
         console.log(`Retrieving secret: ${secretName}`);
         console.log(`Key Vault URL: ${keyVaultUrl}`);
+        console.log(`Request from IP: ${req.ip}`);
+        console.log(`X-Forwarded-For: ${req.get('X-Forwarded-For')}`);
+        console.log(`X-Forwarded-Proto: ${req.get('X-Forwarded-Proto')}`);
         
         const secret = await client.getSecret(secretName);
         
